@@ -31,18 +31,23 @@ export class TeachAiPage extends HelperFunctions {
   async expectLoaded(): Promise<void> {
     await this.assertionValidate(Selectors.teachAi.heading);
     await this.assertionValidate(Selectors.teachAi.dataSourcesSection);
-    // Diagnostic: log what the panel actually contains so we can debug
-    // selector drift if a test fails.
-    const debug = await this.page.locator(Selectors.teachAi.dataSourcesSection).evaluate((el) => ({
-      itemCount: el.querySelectorAll('[data-test="data-source-item"]').length,
-      listHtmlSnippet: (el.querySelector('[data-test="data-sources-list"]') as HTMLElement | null)?.outerHTML?.substring(0, 400) ?? null,
-    })).catch(() => null);
-    if (debug) {
-      console.log('\x1b[34m%s\x1b[0m', `[teach-ai] panel state: itemCount=${debug.itemCount}`);
-      if (debug.itemCount === 0) {
-        console.log('\x1b[33m%s\x1b[0m', `[teach-ai] list HTML: ${debug.listHtmlSnippet}`);
-      }
-    }
+    // The data-sources list is hydrated asynchronously via a GraphQL query
+    // after the section mounts. Wait for the list container to be attached
+    // before tests start poking at row counts. We poll for up to 5s for
+    // ANY row to appear — workspaces are seeded with the website summary
+    // link source, so a freshly-loaded page should converge on ≥ 1 row very
+    // quickly. If the wait expires the test still proceeds (a freshly-pruned
+    // workspace IS a valid state) and downstream assertions decide what to
+    // do.
+    await this.page.locator(Selectors.teachAi.dataSourcesList).waitFor({
+      state: 'attached',
+      timeout: 15_000,
+    });
+    await this.page
+      .locator(Selectors.teachAi.dataSourceItem)
+      .first()
+      .waitFor({ state: 'visible', timeout: 5_000 })
+      .catch(() => null);
   }
 
   /**
@@ -137,7 +142,10 @@ export class TeachAiPage extends HelperFunctions {
    * Use this AFTER `uploadFile` to verify the row landed in the list.
    */
   async expectDataSource(displayName: string): Promise<void> {
-    await this.assertionValidate(Selectors.teachAi.dataSourceItemByTitle(displayName));
+    const el = this.page.locator(Selectors.teachAi.dataSourceItemByTitle(displayName));
+    await el.waitFor({ state: 'visible', timeout: 30_000 });
+    expect(await el.isVisible()).toBeTruthy();
+    console.log('\x1b[34m%s\x1b[0m', `✅ Data source "${displayName}" visible`);
   }
 
   /**

@@ -68,6 +68,12 @@ Expected: `4 passed, 21 skipped (~30s)` on a fresh run.
 
 ## Session recording
 
-> _Add your Google Drive viewable link here:_
+> _Google Drive viewable link here:_
 >
 > [Session recording — qa-interview-2026-06-07](https://drive.google.com/file/d/1adBXKeqyJJ7xodr-2nsYeG5-N1dwSozx/view?usp=sharing)
+>
+> _Work_Session_Recording:_ <https://www.awesomescreenshot.com/video/53339981?key=98e21beb3d76d9a4fb2f67d150906de4>
+
+## Issues found (bonus)
+
+See [`ISSUES.md`](./ISSUES.md) for 6 reported issues — including a voice-reply functional bug and a modal-close-button design issue (`docs/modal-close-button-overlap.png`).

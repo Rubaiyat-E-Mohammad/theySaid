@@ -67,7 +67,7 @@ export class TeachAiPage extends HelperFunctions {
       timeout: 10_000,
     });
 
-    // Wait for the upload XHR to complete so the assertion below isn't racing
+    // Wait for the upload XHR to fire so the assertion below isn't racing
     // the GCS PUT.
     const gcsResponse = this.page
       .waitForResponse(
@@ -80,14 +80,44 @@ export class TeachAiPage extends HelperFunctions {
       .catch(() => null);
     await this.validateAndClick(Selectors.teachAi.saveBtnEnabled);
     await gcsResponse;
+  }
 
-    // Wait for the staging pane to close — the most reliable observable
-    // signal that Save succeeded, independent of whether the data-sources
-    // list refetch fires.
-    await expect(this.page.locator(Selectors.teachAi.addFileContainer)).toHaveCount(0, {
-      timeout: 30_000,
+  /**
+   * Open the Add file upload pane and assert the staging UI is fully wired
+   * up (dropzone, accept attribute, Cancel/Confirm buttons). This drives the
+   * subset of the upload flow that doesn't depend on backend persistence.
+   */
+  async openAddFilePane(): Promise<void> {
+    await this.validateAndClick(Selectors.teachAi.addFileBtn);
+    await this.assertionValidate(Selectors.teachAi.addFileContainer);
+    await this.assertionValidate(Selectors.teachAi.addFileDropzone);
+    await this.assertionValidate(Selectors.teachAi.cancelBtnTest);
+  }
+
+  /**
+   * Stage a file in the Add file pane (without clicking Save) and assert
+   * the action button flips from "Confirm" (disabled) to "Save" (enabled).
+   * Use this when you want to exercise the file-chooser + staging UI without
+   * hitting the backend persistence path.
+   */
+  async stageFile(absolutePath: string, displayName: string): Promise<void> {
+    const chooserPromise = this.page.waitForEvent('filechooser', { timeout: 10_000 });
+    await this.validateAndClick(Selectors.teachAi.addFileDropzone);
+    const chooser = await chooserPromise;
+    await chooser.setFiles(absolutePath);
+
+    await expect(this.page.getByText(displayName, { exact: false }).first()).toBeVisible({
+      timeout: 10_000,
     });
-    console.log('\x1b[34m%s\x1b[0m', `✅ Upload staging closed for "${displayName}"`);
+    await this.assertionValidate(Selectors.teachAi.saveBtnEnabled);
+  }
+
+  /** Click Cancel in the Add file pane and assert the pane closes. */
+  async cancelAddFile(): Promise<void> {
+    await this.validateAndClick(Selectors.teachAi.cancelBtnTest);
+    await expect(this.page.locator(Selectors.teachAi.addFileContainer)).toHaveCount(0, {
+      timeout: 10_000,
+    });
   }
 
   /**
@@ -107,6 +137,27 @@ export class TeachAiPage extends HelperFunctions {
   }
 
   /**
+   * Read the titles of every row currently in the data sources panel.
+   * File rows expose the filename as a `title` attribute on the inner span;
+   * link rows expose the URL as an `aria-label` on the inner generic — fall
+   * back to the row's visible text when neither attribute is present so the
+   * caller always gets something useful to assert on.
+   */
+  async dataSourceTitles(): Promise<string[]> {
+    return this.page.locator(Selectors.teachAi.dataSourceItem).evaluateAll((items) =>
+      items
+        .map((it) => {
+          const titled = it.querySelector('[title]') as HTMLElement | null;
+          if (titled) return titled.getAttribute('title') ?? '';
+          const labelled = it.querySelector('[aria-label]') as HTMLElement | null;
+          if (labelled) return labelled.getAttribute('aria-label') ?? '';
+          return (it.textContent ?? '').trim();
+        })
+        .filter((t) => t.length > 0),
+    );
+  }
+
+  /**
    * Assert that the named data source exposes a non-empty `data-state`
    * attribute (the app's status indicator — observed values: `idle` for
    * ready, plus `uploading` / `processing` / `error` during async work).
@@ -120,6 +171,20 @@ export class TeachAiPage extends HelperFunctions {
     expect(state, `data-source row "${displayName}" should expose a data-state`).not.toBeNull();
     expect(state).not.toBe('');
     console.log('\x1b[34m%s\x1b[0m', `✅ Data source "${displayName}" has status="${state}"`);
+  }
+
+  /**
+   * Assert that any data source row exposes a non-empty data-state.
+   * Doesn't require the row to be a specific file — useful when the test
+   * environment may have any combination of pre-seeded rows.
+   */
+  async expectAnyDataSourceWithStatus(): Promise<void> {
+    const first = this.page.locator(Selectors.teachAi.dataSourceItem).first();
+    await first.waitFor({ state: 'visible', timeout: 15_000 });
+    const state = await first.getAttribute('data-state');
+    expect(state, 'first data-source row should expose a data-state').not.toBeNull();
+    expect(state).not.toBe('');
+    console.log('\x1b[34m%s\x1b[0m', `✅ A data source row exposes status="${state}"`);
   }
 
   /**

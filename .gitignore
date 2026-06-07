@@ -6,3 +6,5 @@ test-results/
 .DS_Store
 *.log
 blob-report/
+.claude/autoqa.md
+.claude/autoqa.md.bak

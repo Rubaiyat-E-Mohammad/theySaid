@@ -1,0 +1,131 @@
+# Feature map — test ID registry for the TheySaid e2e suite.
+# Each id (XXxxxx) maps to a test in `spec` whose title is prefixed with that
+# same id followed by " : " (e.g. test('LG0001 : ...')).
+# utils/featureMapReporter.ts reads this file to build the GitHub Actions
+# test-summary report. `name` is display-only and may differ from the title.
+
+features:
+  - id: LG0001
+    type: Authentication
+    name: User signs in with valid credentials and lands on projects
+    spec: tests/login.spec.ts
+
+  - id: LG0002
+    type: Authentication
+    name: User sees "Invalid email or password" when password is wrong
+    spec: tests/login.spec.ts
+
+  - id: LG0003
+    type: Authentication
+    name: User cannot advance past the email step with a non-existent email
+    spec: tests/login.spec.ts
+
+  - id: LG0004
+    type: Validation
+    name: User sees "Please enter your email" when submitting an empty email
+    spec: tests/login.spec.ts
+
+  - id: LG0005
+    type: Validation
+    name: User sees "Please enter your password" when submitting an empty password
+    spec: tests/login.spec.ts
+
+  - id: LG0006
+    type: Validation
+    name: User sees "Please provide a valid email" when submitting an invalid-format email
+    spec: tests/login.spec.ts
+
+  - id: LG0007
+    type: UI and validation
+    name: Password field is masked (type="password") by default on the sign-in step
+    spec: tests/login.spec.ts
+
+  - id: CP0001
+    type: UI and validation
+    name: User creates an AI Survey project and it appears in the projects list
+    spec: tests/create-project.spec.ts
+
+  - id: CP0002
+    type: UI and validation
+    name: Created project appears in the projects list with the correct title
+    spec: tests/create-project.spec.ts
+
+  - id: CP0003
+    type: Navigation
+    name: Newly-created project is reachable by direct URL (UUID) after creation
+    spec: tests/create-project.spec.ts
+
+  - id: CP0004
+    type: Persistence
+    name: Project title edited after creation persists across reload
+    spec: tests/create-project.spec.ts
+
+  - id: CP0005
+    type: Validation
+    name: Empty title submission is rejected and previous valid title remains
+    spec: tests/create-project.spec.ts
+
+  - id: CP0006
+    type: UI and validation
+    name: Multiple projects created in same session each get unique UUIDs
+    spec: tests/create-project.spec.ts
+
+  - id: TA0001
+    type: Data sources
+    name: User uploads a .txt document and it appears as a data source
+    spec: tests/teach-ai-upload.spec.ts
+
+  - id: TA0002
+    type: Data sources
+    name: Uploaded .txt filename appears in the data sources list
+    spec: tests/teach-ai-upload.spec.ts
+
+  - id: TA0003
+    type: Data sources
+    name: Uploaded file shows a status indicator
+    spec: tests/teach-ai-upload.spec.ts
+
+  - id: TA0004
+    type: Data sources
+    name: Multiple documents can be uploaded and the list grows
+    spec: tests/teach-ai-upload.spec.ts
+
+  - id: TA0005
+    type: Data sources
+    name: Uploaded document can be removed from data sources
+    spec: tests/teach-ai-upload.spec.ts
+
+  - id: TA0006
+    type: Data sources
+    name: User uploads a .pdf document and it appears as a data source
+    spec: tests/teach-ai-upload.spec.ts
+
+  - id: PB0001
+    type: End-to-end flow
+    name: User publishes an AI Survey and an anonymous taker submits a response
+    spec: tests/publish-and-take-survey.spec.ts
+
+  - id: PB0002
+    type: Publish flow
+    name: Publish dialog shows a shareable link that contains the project UUID
+    spec: tests/publish-and-take-survey.spec.ts
+
+  - id: PB0003
+    type: Access control
+    name: Anonymous taker can open a published survey URL with no auth cookies
+    spec: tests/publish-and-take-survey.spec.ts
+
+  - id: PB0004
+    type: Submission flow
+    name: Submitting hides the composer and shows the Thank-you heading
+    spec: tests/publish-and-take-survey.spec.ts
+
+  - id: PB0005
+    type: Publish flow
+    name: Re-publishing the same project preserves the original shareable link
+    spec: tests/publish-and-take-survey.spec.ts
+
+  - id: PB0006
+    type: Empty state
+    name: Anonymous taker visiting a non-existent survey URL sees the expired-link state
+    spec: tests/publish-and-take-survey.spec.ts

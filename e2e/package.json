@@ -1,0 +1,19 @@
+{
+  "name": "theysaid-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright E2E suite for TheySaid AI (evo.dev.theysaid.io)",
+  "scripts": {
+    "test": "playwright test",
+    "test:local": "HEADED=1 playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^24.0.0",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0"
+  }
+}

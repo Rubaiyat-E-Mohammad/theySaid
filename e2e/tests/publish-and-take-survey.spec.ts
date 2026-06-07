@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { SignInPage } from '../pages/signInPage.ts';
 import { ProjectsPage } from '../pages/projectsPage.ts';
 import { ProjectEditorPage } from '../pages/projectEditorPage.ts';
@@ -15,36 +15,48 @@ import { TestData, Urls } from '../utils/testData.ts';
  * @Test_PB0006 : Anonymous taker visiting a non-existent survey URL sees the expired-link state
  *
  * Flow primitives:
- *   - Author side: sign in → create AI Survey project → set title / question →
- *     Publish → extract shareable URL.
+ *   - Author side: shared signed-in page → navigate to /projects → create AI
+ *     Survey project → set title / question → Publish → extract shareable URL.
  *   - Taker side: fresh browser context (no auth cookies) → open survey URL.
  *
- * Each author-side test runs the full create-and-publish dance because the
- * suite is fully-parallel; tests do not share project state.
+ * Each author-side test creates its own project with a unique timestamped
+ * title so tests remain independent when run serially. The shared page is
+ * already authenticated; createAndPublishProject navigates to /projects
+ * rather than re-signing in.
+ *
+ * One browser opens in beforeAll and is shared across all tests in serial
+ * order. Taker-side tests open isolated anonymous contexts per test and
+ * close them in a finally block.
  */
 test.describe('Publish project + take survey', () => {
-  // The AuthKit-hosted sign-in form occasionally fails to render its email
-  // input on the first navigation under parallel load — same flake observed
-  // in other spec files. Allow a single retry locally so a pre-existing
-  // network blip doesn't fail the suite. CI already retries via the global
-  // playwright.config.ts setting.
-  test.describe.configure({ retries: 1 });
+  // retries: 1 guards against intermittent network blips on the AuthKit
+  // sign-in page (rare under serial load but observed during exploration).
+  test.describe.configure({ mode: 'serial', retries: 1 });
+
+  let page: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
+    await new SignInPage(page).signIn(TestData.email, TestData.password);
+    await new ProjectsPage(page).expectLoaded();
+  });
+
+  test.afterAll(async () => {
+    await page.close();
+  });
 
   /**
-   * Helper used by every author-side test. Performs sign-in, project creation,
-   * title / question / labels, then publishes — returning both the UUID and
-   * the shareable survey URL. Centralising the flow keeps the spec readable
-   * while letting each test focus on the specific assertion it owns.
+   * Navigates to /projects, creates a new AI Survey, fills all required
+   * fields, and publishes — returning the UUID and shareable survey URL.
+   * Does NOT sign in; assumes the shared `page` is already authenticated.
    */
   async function createAndPublishProject(
-    page: import('@playwright/test').Page,
     titlePrefix: string,
   ): Promise<{ uuid: string; surveyUrl: string; editor: ProjectEditorPage }> {
-    const signIn = new SignInPage(page);
     const projects = new ProjectsPage(page);
     const editor = new ProjectEditorPage(page);
 
-    await signIn.signIn(TestData.email, TestData.password);
+    await projects.gotoProjectsList();
     await projects.expectLoaded();
     await projects.createProject('AI Survey', {
       teachAiUrl: TestData.teachAiSeedUrl,
@@ -61,10 +73,9 @@ test.describe('Publish project + take survey', () => {
   }
 
   test('PB0001 : User publishes an AI Survey and an anonymous taker submits a response', async ({
-    page,
     browser,
   }) => {
-    const { uuid, surveyUrl } = await createAndPublishProject(page, 'PB0001 Publish & Take');
+    const { uuid, surveyUrl } = await createAndPublishProject('PB0001 Publish & Take');
     expect(surveyUrl).toContain(uuid);
 
     // Respondent side: anonymous browser context.
@@ -79,10 +90,8 @@ test.describe('Publish project + take survey', () => {
     }
   });
 
-  test.skip('PB0002 : Publish dialog shows a shareable link that contains the project UUID', async ({
-    page,
-  }) => {
-    const { uuid, surveyUrl } = await createAndPublishProject(page, 'PB0002 Link UUID');
+  test('PB0002 : Publish dialog shows a shareable link that contains the project UUID', async () => {
+    const { uuid, surveyUrl } = await createAndPublishProject('PB0002 Link UUID');
     // The dialog rendered a URL on /survey/project/{uuid}. Two assertions:
     //   1. The link is an absolute HTTPS URL on the configured base.
     //   2. The same UUID we parsed from the editor URL is embedded in the link.
@@ -94,11 +103,10 @@ test.describe('Publish project + take survey', () => {
     expect(surveyUrl.startsWith(Urls.baseUrl)).toBeTruthy();
   });
 
-  test.skip('PB0003 : Anonymous taker (no auth cookies) can open a published survey URL', async ({
-    page,
+  test('PB0003 : Anonymous taker (no auth cookies) can open a published survey URL', async ({
     browser,
   }) => {
-    const { surveyUrl } = await createAndPublishProject(page, 'PB0003 Anonymous Access');
+    const { surveyUrl } = await createAndPublishProject('PB0003 Anonymous Access');
 
     // Fresh isolated context — no auth cookies, no localStorage from the author.
     const respondentContext = await browser.newContext();
@@ -115,11 +123,10 @@ test.describe('Publish project + take survey', () => {
     }
   });
 
-  test.skip('PB0004 : Submitting hides the composer and shows the Thank-you heading', async ({
-    page,
+  test('PB0004 : Submitting hides the composer and shows the Thank-you heading', async ({
     browser,
   }) => {
-    const { surveyUrl } = await createAndPublishProject(page, 'PB0004 Thank You');
+    const { surveyUrl } = await createAndPublishProject('PB0004 Thank You');
 
     const respondentContext = await browser.newContext();
     const respondentPage = await respondentContext.newPage();
@@ -134,11 +141,8 @@ test.describe('Publish project + take survey', () => {
     }
   });
 
-  test.skip('PB0005 : Re-publishing the same project preserves the original shareable link', async ({
-    page,
-  }) => {
+  test('PB0005 : Re-publishing the same project preserves the original shareable link', async () => {
     const { uuid, surveyUrl: firstUrl, editor } = await createAndPublishProject(
-      page,
       'PB0005 Re-publish',
     );
     expect(firstUrl).toContain(uuid);
@@ -150,7 +154,7 @@ test.describe('Publish project + take survey', () => {
     expect(secondUrl).toBe(firstUrl);
   });
 
-  test.skip('PB0006 : Anonymous taker visiting a non-existent survey URL sees the expired-link state', async ({
+  test('PB0006 : Anonymous taker visiting a non-existent survey URL sees the expired-link state', async ({
     browser,
   }) => {
     // No author flow required — we test the public empty-state directly.

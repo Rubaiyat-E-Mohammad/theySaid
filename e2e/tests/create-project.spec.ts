@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { SignInPage } from '../pages/signInPage.ts';
 import { ProjectsPage } from '../pages/projectsPage.ts';
 import { ProjectEditorPage } from '../pages/projectEditorPage.ts';
@@ -27,18 +27,34 @@ import { TestData } from '../utils/testData.ts';
  * `editor.fillMinimumFieldsForAutosave(title)` (or the explicit
  * setTitle + setQuestionText + setRatingLabels sequence in CP0001) before
  * `waitForUuid()`.
+ *
+ * One browser opens in beforeAll and is shared across all tests in serial
+ * order. beforeEach resets to the projects list so each test starts clean.
  */
 test.describe('Create project', () => {
-  test('CP0001 : User creates an AI Survey project and it appears in the projects list', async ({
-    page,
-  }) => {
-    const signIn = new SignInPage(page);
-    const projects = new ProjectsPage(page);
-    const editor = new ProjectEditorPage(page);
+  test.describe.configure({ mode: 'serial' });
 
-    await signIn.signIn(TestData.email, TestData.password);
+  let page: Page;
+  let projects: ProjectsPage;
+  let editor: ProjectEditorPage;
+
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
+    projects = new ProjectsPage(page);
+    editor = new ProjectEditorPage(page);
+    await new SignInPage(page).signIn(TestData.email, TestData.password);
     await projects.expectLoaded();
+  });
 
+  test.afterAll(async () => {
+    await page.close();
+  });
+
+  test.beforeEach(async () => {
+    await projects.gotoProjectsList();
+  });
+
+  test('CP0001 : User creates an AI Survey project and it appears in the projects list', async () => {
     await projects.createProject('AI Survey', {
       teachAiUrl: TestData.teachAiSeedUrl,
     });
@@ -56,16 +72,7 @@ test.describe('Create project', () => {
     await projects.expectProjectReachable(uuid);
   });
 
-  test.skip('CP0002 : Created project appears in the projects list with the correct title', async ({
-    page,
-  }) => {
-    const signIn = new SignInPage(page);
-    const projects = new ProjectsPage(page);
-    const editor = new ProjectEditorPage(page);
-
-    await signIn.signIn(TestData.email, TestData.password);
-    await projects.expectLoaded();
-
+  test('CP0002 : Created project appears in the projects list with the correct title', async () => {
     await projects.createProject('AI Survey', { teachAiUrl: TestData.teachAiSeedUrl });
 
     const title = TestData.projectTitle('CP0002 List Visible');
@@ -80,16 +87,7 @@ test.describe('Create project', () => {
     await projects.expectProjectInListByTitle(title);
   });
 
-  test.skip('CP0003 : Newly-created project is reachable by direct URL (UUID) after creation', async ({
-    page,
-  }) => {
-    const signIn = new SignInPage(page);
-    const projects = new ProjectsPage(page);
-    const editor = new ProjectEditorPage(page);
-
-    await signIn.signIn(TestData.email, TestData.password);
-    await projects.expectLoaded();
-
+  test('CP0003 : Newly-created project is reachable by direct URL (UUID) after creation', async () => {
     await projects.createProject('AI Survey', { teachAiUrl: TestData.teachAiSeedUrl });
     await editor.fillMinimumFieldsForAutosave(
       TestData.projectTitle('CP0003 Direct URL'),
@@ -103,16 +101,7 @@ test.describe('Create project', () => {
     await expect(page).toHaveURL(new RegExp(`/projects/${uuid}`));
   });
 
-  test.skip('CP0004 : Project title edited after creation persists across reload', async ({
-    page,
-  }) => {
-    const signIn = new SignInPage(page);
-    const projects = new ProjectsPage(page);
-    const editor = new ProjectEditorPage(page);
-
-    await signIn.signIn(TestData.email, TestData.password);
-    await projects.expectLoaded();
-
+  test('CP0004 : Project title edited after creation persists across reload', async () => {
     await projects.createProject('AI Survey', { teachAiUrl: TestData.teachAiSeedUrl });
     const initialTitle = TestData.projectTitle('CP0004 Initial');
     await editor.fillMinimumFieldsForAutosave(
@@ -129,16 +118,7 @@ test.describe('Create project', () => {
     expect(await editor.getTitleValue()).toBe(editedTitle);
   });
 
-  test.skip('CP0005 : Empty title submission is rejected — previous valid title remains', async ({
-    page,
-  }) => {
-    const signIn = new SignInPage(page);
-    const projects = new ProjectsPage(page);
-    const editor = new ProjectEditorPage(page);
-
-    await signIn.signIn(TestData.email, TestData.password);
-    await projects.expectLoaded();
-
+  test('CP0005 : Empty title submission is rejected — previous valid title remains', async () => {
     await projects.createProject('AI Survey', { teachAiUrl: TestData.teachAiSeedUrl });
     const validTitle = TestData.projectTitle('CP0005 Valid');
     await editor.fillMinimumFieldsForAutosave(
@@ -157,16 +137,7 @@ test.describe('Create project', () => {
     expect(after.length).toBeGreaterThan(0);
   });
 
-  test.skip('CP0006 : Multiple projects created in same session each get unique UUIDs', async ({
-    page,
-  }) => {
-    const signIn = new SignInPage(page);
-    const projects = new ProjectsPage(page);
-    const editor = new ProjectEditorPage(page);
-
-    await signIn.signIn(TestData.email, TestData.password);
-    await projects.expectLoaded();
-
+  test('CP0006 : Multiple projects created in same session each get unique UUIDs', async () => {
     // First project.
     await projects.createProject('AI Survey', { teachAiUrl: TestData.teachAiSeedUrl });
     await editor.fillMinimumFieldsForAutosave(

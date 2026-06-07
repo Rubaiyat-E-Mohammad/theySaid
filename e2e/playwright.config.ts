@@ -5,24 +5,23 @@ import dotenv from 'dotenv';
 // populated when utils/testData.ts evaluates.
 dotenv.config();
 
-/**
- * Playwright config for the TheySaid E2E suite.
- * - 4 parallel workers (each spec signs in fresh; no shared storageState).
- * - Single chromium project; add Firefox/WebKit later by listing more projects.
- * - Reporters: list (console), html (artifact), featureMapReporter (CI summary).
- */
 export default defineConfig({
   testDir: './tests',
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: true,
-  workers: 4,
-  retries: process.env.CI ? 1 : 0,
-  reporter: [
-    ['list'],
-    ['html', { open: 'never', outputFolder: 'playwright-report' }],
-    ['./utils/featureMapReporter.ts'],
-  ],
+  workers: 1,
+  retries: process.env.CI ? 0 : 0,
+  reporter: process.env.CI
+    ? [
+        ['blob', { outputDir: 'blob-report' }],
+        ['./utils/featureMapReporter.ts'],
+      ]
+    : [
+        ['list'],
+        ['html', { open: 'never', outputFolder: 'playwright-report' }],
+        ['./utils/featureMapReporter.ts'],
+      ],
   use: {
     baseURL: process.env.BASE_URL || process.env.APP_URL || 'https://evo.dev.theysaid.io',
     trace: 'on-first-retry',

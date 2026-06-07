@@ -17,9 +17,23 @@ export class SignInPage extends HelperFunctions {
 
   async signIn(email: string, password: string): Promise<void> {
     await this.navigateToURL(this.signInPage);
-    // AuthKit redirects to its hosted page when not authenticated. Wait for
-    // the URL to actually land on the AuthKit domain before probing the form.
-    await this.page.waitForURL(/authkit\.app|theysaid\.io/, { timeout: 30_000 });
+    // Wait until the URL settles: either on the AuthKit hosted sign-in page
+    // (unauthenticated) OR on the app's /projects or /home (session already
+    // valid via storageState). The root URL briefly sits on theysaid.io before
+    // the SPA can issue the auth redirect, so we must wait for a /path
+    // segment or the authkit.app domain before deciding.
+    await this.page.waitForURL(
+      (url) =>
+        url.hostname.includes('authkit') ||
+        url.pathname.startsWith('/projects') ||
+        url.pathname.startsWith('/home'),
+      { timeout: 30_000 },
+    );
+    // Already authenticated — storageState was loaded; skip the form.
+    if (!this.page.url().includes('authkit')) {
+      await this.dismissCookieBanner();
+      return;
+    }
     await this.validateAndFillStrings(Selectors.signIn.emailInput, email);
     await this.validateAndClick(Selectors.signIn.continueBtn);
     await this.validateAndFillStrings(Selectors.signIn.passwordInput, password);

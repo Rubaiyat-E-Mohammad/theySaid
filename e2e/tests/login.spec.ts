@@ -22,10 +22,13 @@ import { Credentials, TestData } from '../utils/testData.ts';
  * tests anchor on the English error copy.
  */
 test.use({ locale: 'en-US' });
+// Login tests exercise the real AuthKit flow — clear any saved session so
+// every test starts unauthenticated regardless of the project storageState.
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Login', () => {
 
-  test.skip('LG0002 : User sees "Invalid email or password" when password is wrong', async ({ page }) => {
+  test('LG0002 : User sees "Invalid email or password" when password is wrong', async ({ page }) => {
     const signIn = new SignInPage(page);
     await signIn.signInExpectingInvalidCredentials(TestData.email, Credentials.wrongPassword);
     // URL must stay on the AuthKit /password step — no app redirect happened.
@@ -33,7 +36,7 @@ test.describe('Login', () => {
     expect(page.url()).not.toMatch(/evo\.dev\.theysaid\.io\/(projects|home)/);
   });
 
-  test.skip('LG0003 : User cannot advance past the email step with a non-existent email', async ({ page }) => {
+  test('LG0003 : User cannot advance past the email step with a non-existent email', async ({ page }) => {
     const signIn = new SignInPage(page);
     await signIn.submitEmailExpectingNoPasswordStep(Credentials.unregisteredEmail);
     // AuthKit silently keeps the taker on the email step — never reveals
@@ -42,25 +45,25 @@ test.describe('Login', () => {
     expect(page.url()).not.toMatch(/evo\.dev\.theysaid\.io\/(projects|home)/);
   });
 
-  test.skip('LG0004 : User sees "Please enter your email" when submitting an empty email', async ({ page }) => {
+  test('LG0004 : User sees "Please enter your email" when submitting an empty email', async ({ page }) => {
     const signIn = new SignInPage(page);
     await signIn.submitEmptyEmail();
     expect(page.url()).not.toMatch(/\/password/);
   });
 
-  test.skip('LG0005 : User sees "Please enter your password" when submitting an empty password', async ({ page }) => {
+  test('LG0005 : User sees "Please enter your password" when submitting an empty password', async ({ page }) => {
     const signIn = new SignInPage(page);
     await signIn.submitEmptyPasswordOnPasswordStep(TestData.email);
     expect(page.url()).toMatch(/\/password/);
   });
 
-  test.skip('LG0006 : User sees "Please provide a valid email" when submitting an invalid-format email', async ({ page }) => {
+  test('LG0006 : User sees "Please provide a valid email" when submitting an invalid-format email', async ({ page }) => {
     const signIn = new SignInPage(page);
     await signIn.submitInvalidEmailFormat(Credentials.invalidFormatEmail);
     expect(page.url()).not.toMatch(/\/password/);
   });
 
-  test.skip('LG0007 : Password field is masked (type="password") by default on the sign-in step', async ({ page }) => {
+  test('LG0007 : Password field is masked (type="password") by default on the sign-in step', async ({ page }) => {
     const signIn = new SignInPage(page);
     await signIn.assertPasswordFieldMaskedByDefault(TestData.email);
   });

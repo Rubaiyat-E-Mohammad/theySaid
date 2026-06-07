@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SignInPage } from '../pages/signInPage.ts';
@@ -35,15 +35,27 @@ const FIXTURES = path.resolve(__dirname, '..', 'uploadeditems');
  *    or Refresh / Remove (link source).
  *  - Removing a row pops a "Remove file" confirmation dialog; clicking its
  *    Remove button commits the deletion.
+ *
+ * One browser opens in beforeAll and is shared across all tests in serial
+ * order. beforeEach navigates back to the Teach AI page to reset state.
  */
 test.describe('Teach AI — upload document', () => {
-  let signIn: SignInPage;
+  test.describe.configure({ mode: 'serial' });
+
+  let page: Page;
   let teachAi: TeachAiPage;
 
-  test.beforeEach(async ({ page }) => {
-    signIn = new SignInPage(page);
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
+    await new SignInPage(page).signIn(TestData.email, TestData.password);
     teachAi = new TeachAiPage(page);
-    await signIn.signIn(TestData.email, TestData.password);
+  });
+
+  test.afterAll(async () => {
+    await page.close();
+  });
+
+  test.beforeEach(async () => {
     await teachAi.goto();
     await teachAi.expectLoaded();
   });
@@ -54,7 +66,7 @@ test.describe('Teach AI — upload document', () => {
     await teachAi.expectDataSource('sample-doc.txt');
   });
 
-  test('TA0002 : Add file pane exposes the upload UI elements', async ({ page }) => {
+  test('TA0002 : Add file pane exposes the upload UI elements', async () => {
     // Clicking Add file mounts the upload pane with a dropzone, hidden file
     // input, and Cancel / Confirm buttons. Confirm starts disabled (no file
     // staged yet) — that's the contract we assert.
@@ -96,7 +108,7 @@ test.describe('Teach AI — upload document', () => {
     }
   });
 
-  test('TA0005 : Cancel closes the Add file pane without uploading', async ({ page }) => {
+  test('TA0005 : Cancel closes the Add file pane without uploading', async () => {
     // Verify the negative path: opening the pane and cancelling does NOT
     // mutate the data sources list. We snapshot the list before and after.
     const beforeCount = await teachAi.dataSourceCount();

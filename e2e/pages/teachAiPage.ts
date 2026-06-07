@@ -31,6 +31,18 @@ export class TeachAiPage extends HelperFunctions {
   async expectLoaded(): Promise<void> {
     await this.assertionValidate(Selectors.teachAi.heading);
     await this.assertionValidate(Selectors.teachAi.dataSourcesSection);
+    // Diagnostic: log what the panel actually contains so we can debug
+    // selector drift if a test fails.
+    const debug = await this.page.locator(Selectors.teachAi.dataSourcesSection).evaluate((el) => ({
+      itemCount: el.querySelectorAll('[data-test="data-source-item"]').length,
+      listHtmlSnippet: (el.querySelector('[data-test="data-sources-list"]') as HTMLElement | null)?.outerHTML?.substring(0, 400) ?? null,
+    })).catch(() => null);
+    if (debug) {
+      console.log('\x1b[34m%s\x1b[0m', `[teach-ai] panel state: itemCount=${debug.itemCount}`);
+      if (debug.itemCount === 0) {
+        console.log('\x1b[33m%s\x1b[0m', `[teach-ai] list HTML: ${debug.listHtmlSnippet}`);
+      }
+    }
   }
 
   /**
@@ -133,7 +145,9 @@ export class TeachAiPage extends HelperFunctions {
    * Read-only; used to assert that uploading grows the list.
    */
   async dataSourceCount(): Promise<number> {
-    return this.page.locator(Selectors.teachAi.dataSourceItem).count();
+    const c = await this.page.locator(Selectors.teachAi.dataSourceItem).count();
+    console.log('\x1b[34m%s\x1b[0m', `dataSourceCount=${c}`);
+    return c;
   }
 
   /**

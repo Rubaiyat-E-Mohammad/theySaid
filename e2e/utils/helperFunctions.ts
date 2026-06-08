@@ -36,29 +36,21 @@ export class HelperFunctions {
 
   async navigateToURL(url: string) {
     try {
-      await this.waitForLoading();
-      try {
-        await this.page.goto(url, { waitUntil: 'domcontentloaded' });
-      } catch (err) {
-        const msg = (err as Error).message ?? '';
-        if (!msg.includes('ERR_ABORTED')) throw err;
-      }
-      await this.waitForLoading();
+      await this.page.goto(url, { waitUntil: 'domcontentloaded' });
       console.log('\x1b[34m%s\x1b[0m', `✅ Navigated to ${url}`);
-    } catch (error) {
-      console.log('\x1b[31m%s\x1b[0m', `❌ Failed to navigate to ${url}: ${error}`);
-      throw error;
+    } catch (err) {
+      const msg = (err as Error).message ?? '';
+      if (msg.includes('ERR_ABORTED')) return;
+      console.log('\x1b[31m%s\x1b[0m', `❌ Failed to navigate to ${url}: ${err}`);
+      throw err;
     }
   }
 
-  async assertionValidate(locator: string) {
+  async assertionValidate(locator: string, timeout = 15_000) {
     try {
-      await this.waitForLoading();
       const el = this.page.locator(locator);
-      await el.waitFor();
-      await this.waitForLoading();
+      await expect(el).toBeVisible({ timeout });
       console.log('\x1b[34m%s\x1b[0m', `✅ Asserted ${locator}`);
-      expect(await el.isVisible()).toBeTruthy();
     } catch (error) {
       console.log('\x1b[31m%s\x1b[0m', `❌ Failed to assert ${locator}: ${error}`);
       throw error;
@@ -67,7 +59,6 @@ export class HelperFunctions {
 
   async validateAndClick(locator: string) {
     try {
-      await this.waitForLoading();
       const el = this.page.locator(locator);
       await el.waitFor();
       await el.click();
@@ -81,11 +72,9 @@ export class HelperFunctions {
 
   async validateAndFillStrings(locator: string, value: string) {
     try {
-      await this.waitForLoading();
       const el = this.page.locator(locator);
       await el.waitFor();
       await el.fill(value);
-      await this.waitForLoading();
       console.log('\x1b[35m%s\x1b[0m', `✅ Filled ${locator} with ${value.length} chars`);
     } catch (error) {
       console.log('\x1b[31m%s\x1b[0m', `❌ Failed to fill ${locator}: ${error}`);
@@ -99,7 +88,6 @@ export class HelperFunctions {
 
   async validateAndCheckBox(locator: string) {
     try {
-      await this.waitForLoading();
       const el = this.page.locator(locator);
       await el.waitFor();
       await el.check();
@@ -113,11 +101,9 @@ export class HelperFunctions {
 
   async selectOptionWithLabel(locator: string, label: string) {
     try {
-      await this.waitForLoading();
       const el = this.page.locator(locator);
       await el.waitFor();
       await this.page.selectOption(locator, { label });
-      await this.waitForLoading();
       console.log('\x1b[33m%s\x1b[0m', `✅ Selected ${locator} = ${label}`);
     } catch (error) {
       console.log('\x1b[31m%s\x1b[0m', `❌ Failed to select ${locator} with label ${label}: ${error}`);
@@ -127,11 +113,9 @@ export class HelperFunctions {
 
   async selectOptionWithValue(locator: string, value: string) {
     try {
-      await this.waitForLoading();
       const el = this.page.locator(locator);
       await el.waitFor();
       await this.page.selectOption(locator, { value });
-      await this.waitForLoading();
       console.log('\x1b[33m%s\x1b[0m', `✅ Selected ${locator} = ${value}`);
     } catch (error) {
       console.log('\x1b[31m%s\x1b[0m', `❌ Failed to select ${locator} with value ${value}: ${error}`);
@@ -141,8 +125,9 @@ export class HelperFunctions {
 
   async checkElementText(locator: string, expectedText: string) {
     try {
-      await this.waitForLoading();
-      const el = this.page.locator(locator);
+      // .first() avoids strict-mode failures when a locator matches multiple
+      // elements (e.g. AI mode + form mode both rendered in the DOM).
+      const el = this.page.locator(locator).first();
       await el.waitFor();
       const actual = (await el.textContent())?.trim();
       expect(actual).toContain(expectedText);
@@ -155,7 +140,6 @@ export class HelperFunctions {
 
   async validateAndClickAny(locator: string) {
     try {
-      await this.waitForLoading();
       const elements = this.page.locator(locator);
       const count = await elements.count();
       for (let i = 0; i < count; i++) {
@@ -176,7 +160,6 @@ export class HelperFunctions {
 
   async validateAny(locator: string) {
     try {
-      await this.waitForLoading();
       const elements = this.page.locator(locator);
       const count = await elements.count();
       for (let i = 0; i < count; i++) {

@@ -38,11 +38,13 @@ export class SurveyTakerPage extends HelperFunctions {
    * positioned beneath the modal once it dismisses visually.
    */
   async dismissInstructionsModal(): Promise<void> {
-    const closeBtn = this.page.locator(Selectors.survey.instructionsCloseBtn);
-    const visible = await closeBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-    if (visible) {
-      await this.validateAndClick(Selectors.survey.instructionsCloseBtn);
-    }
+    const backdrop = this.page.locator(Selectors.survey.instructionsBackdrop);
+    const visible = await backdrop.isVisible({ timeout: 5_000 }).catch(() => false);
+    if (!visible) return;
+    await this.validateAndClick(Selectors.survey.instructionsCloseBtn);
+    // Wait for backdrop to clear — it lingers briefly after the close click
+    // and will intercept the next pointer event if we proceed immediately.
+    await expect(backdrop).toBeHidden({ timeout: 10_000 });
   }
 
   /**
@@ -81,7 +83,9 @@ export class SurveyTakerPage extends HelperFunctions {
    * and shows this message, NOT a 404 page.
    */
   async expectExpiredState(): Promise<void> {
-    await this.assertionValidate(Selectors.survey.expiredHeading);
+    // 30s budget — SPA fetches project data async after domcontentloaded;
+    // the expired-state heading only renders once the 404 response arrives.
+    await this.assertionValidate(Selectors.survey.expiredHeading, 30_000);
     // Composer / question must not render on the expired page.
     await expect(this.page.locator(Selectors.survey.sendResponseBtn)).toBeHidden();
   }

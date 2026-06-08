@@ -105,6 +105,7 @@ export const Selectors = {
   // Survey-taker page (public)
   survey: {
     instructionsCloseBtn: 'button[aria-label="Close"]',
+    instructionsBackdrop: '[data-test="instructions-modal-backdrop"]',
     modeToggle: '[data-test="mode-toggle"]',
     questionHeading: 'h2',
     /** The question title rendered on the taker page (has a stable data-test). */

@@ -132,7 +132,10 @@ export class SignInPage extends HelperFunctions {
    */
   async submitEmptyEmail(): Promise<void> {
     await this.gotoSignIn();
-    await this.validateAndFillStrings(Selectors.signIn.emailInput, '');
+    // Click the email input to focus and touch it — AuthKit only fires inline
+    // validation on fields the user has interacted with. Without this, the
+    // empty-email error does not reliably appear on Continue press.
+    await this.validateAndClick(Selectors.signIn.emailInput);
     await this.validateAndClick(Selectors.signIn.continueBtn);
     await this.assertionValidate(Selectors.signIn.emptyEmailError);
     expect(this.page.url()).not.toMatch(/\/password/);

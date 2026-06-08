@@ -18,7 +18,9 @@ export class SurveyTakerPage extends HelperFunctions {
    * what scenario they are testing.
    */
   async openRaw(url: string): Promise<void> {
-    await this.navigateToURL(url);
+    // networkidle waits for the SPA's initial API call to settle — ensures the
+    // expired-state or question content is already rendered before assertions.
+    await this.navigateToURL(url, 'networkidle');
   }
 
   async open(url: string): Promise<void> {
@@ -83,9 +85,9 @@ export class SurveyTakerPage extends HelperFunctions {
    * and shows this message, NOT a 404 page.
    */
   async expectExpiredState(): Promise<void> {
-    // 30s budget — SPA fetches project data async after domcontentloaded;
-    // the expired-state heading only renders once the 404 response arrives.
-    await this.assertionValidate(Selectors.survey.expiredHeading, 30_000);
+    // 45s fallback — openRaw uses networkidle so heading is usually already
+    // present; this guards against slow servers or mid-fetch navigation.
+    await this.assertionValidate(Selectors.survey.expiredHeading, 45_000);
     // Composer / question must not render on the expired page.
     await expect(this.page.locator(Selectors.survey.sendResponseBtn)).toBeHidden();
   }

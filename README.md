@@ -2,18 +2,16 @@
 
 Playwright E2E test suite for [evo.dev.theysaid.io](https://evo.dev.theysaid.io/) — the TheySaid AI survey platform.
 
-## Coverage — 4 core flows
+## Coverage — 25 tests across 4 flows
 
-| ID     | Flow                                                          | Spec                                       |
-| ------ | ------------------------------------------------------------- | ------------------------------------------ |
-| LG0001 | User signs in with valid credentials                          | `e2e/tests/login.spec.ts`                  |
-| CP0001 | User creates an AI Survey project                             | `e2e/tests/create-project.spec.ts`         |
-| TA0001 | User uploads a `.txt` document via Teach AI                   | `e2e/tests/teach-ai-upload.spec.ts`        |
-| PB0001 | User publishes an AI Survey + anonymous taker submits         | `e2e/tests/publish-and-take-survey.spec.ts`|
+| IDs          | Flow                          | Spec                                        | Tests |
+| ------------ | ----------------------------- | ------------------------------------------- | ----- |
+| LG0001–LG0007 | Sign-in (WorkOS AuthKit)     | `e2e/tests/login.spec.ts`                   | 7     |
+| CP0001–CP0006 | Create AI Survey project     | `e2e/tests/create-project.spec.ts`          | 6     |
+| TA0001–TA0006 | Teach AI — upload data source | `e2e/tests/teach-ai-upload.spec.ts`        | 6     |
+| PB0001–PB0006 | Publish survey + take survey | `e2e/tests/publish-and-take-survey.spec.ts` | 6     |
 
-Registration (OTP-gated) is intentionally skipped per assessment instructions.
-
-Additional exploratory tests (LG0002–LG0007, CP0002–CP0006, TA0002–TA0006, PB0002–PB0006) are present but marked `test.skip(...)` — uncomment to extend coverage.
+All 25 tests are active and green. Registration (OTP-gated) is intentionally skipped.
 
 ## Layout
 
@@ -21,12 +19,12 @@ Canonical AutoQA layout — sibling `e2e/`, `.github/`, `.claude/` at repo root.
 
 ```
 TheySaid/
-├── .github/workflows/e2e_tests.yml   # CI — 4-shard matrix run
+├── .github/workflows/e2e.yml         # CI — 4-shard matrix run
 ├── .claude/                          # AutoQA agent definition
 └── e2e/
     ├── .env.example                  # BASE_URL, SIGNIN_EMAIL, SIGNIN_PASSWORD
     ├── .mcp.json                     # Playwright-test MCP server config
-    ├── playwright.config.ts          # 4 workers, html + list + featureMap reporters
+    ├── playwright.config.ts          # 1 worker, serial specs; blob reporter in CI
     ├── pages/                        # POMs (each extends HelperFunctions)
     ├── tests/                        # Specs (one POM call per test)
     ├── utils/
@@ -54,17 +52,18 @@ cp .env.example .env
 
 ```bash
 cd e2e
-npm test              # headless, 4 workers
-npm run test:local    # headed (HEADED=1)
-npm run test:ui       # Playwright UI mode
-npm run report        # open last HTML report
+npm test                # headless, 1 worker
+npm run test:local      # headed
+npm run test:ui         # Playwright UI mode
+npm run report          # open last HTML report
+npm run report:merge    # merge sharded blob reports into HTML
 ```
 
-Expected: `4 passed, 21 skipped (~30s)` on a fresh run.
+Expected: `25 passed (~4m)` on a clean run.
 
 ## CI
 
-`.github/workflows/e2e_tests.yml` runs on push + pull_request. 4-shard matrix → merge-reports job → uploaded `playwright-report/` artifact. Requires repo secrets: `BASE_URL`, `SIGNIN_EMAIL`, `SIGNIN_PASSWORD`.
+`.github/workflows/e2e.yml` runs on push + pull_request to `main`. 4-shard matrix (one shard per spec file) → `merge-reports` job produces a single `playwright-report/` artifact. Requires repo secrets: `TEST_EMAIL`, `TEST_PASSWORD`. Optional var: `BASE_URL` (defaults to `https://evo.dev.theysaid.io`).
 
 ## Session recording
 

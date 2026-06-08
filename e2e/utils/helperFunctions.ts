@@ -34,9 +34,9 @@ export class HelperFunctions {
     await this.page.waitForLoadState('domcontentloaded');
   }
 
-  async navigateToURL(url: string) {
+  async navigateToURL(url: string, waitUntil: 'domcontentloaded' | 'load' | 'networkidle' = 'domcontentloaded') {
     try {
-      await this.page.goto(url, { waitUntil: 'domcontentloaded' });
+      await this.page.goto(url, { waitUntil });
       console.log('\x1b[34m%s\x1b[0m', `✅ Navigated to ${url}`);
     } catch (err) {
       const msg = (err as Error).message ?? '';
